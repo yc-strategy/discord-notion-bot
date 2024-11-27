@@ -1,9 +1,11 @@
 import os
 from dotenv import load_dotenv
 import discord
+import asyncio
 from discord import app_commands
 from cogs.alpha import AlphaCog
 from cogs.elon_monitor import ElonMonitorCog
+from notion_cog import NotionCog
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,6 +22,7 @@ class CustomClient(discord.Client):
 
     async def setup_hook(self):
         # Load cogs
+        await self.tree.add_cog(NotionCog(self))
         await self.tree.add_cog(AlphaCog(self.alpha_api, self))
         await self.tree.add_cog(ElonMonitorCog(self))
         # Start background task
