@@ -1,47 +1,38 @@
 import os
 from dotenv import load_dotenv
 import discord
-import asyncio
-from discord import app_commands
-from cogs.alpha import AlphaCog
-from cogs.elon_monitor import ElonMonitorCog
-from notion_cog import NotionCog
+from discord.ext import commands
+from cogs.notion_cog import AddStockCog, AddEntryCog, ListStockCog, FibonacciCog
+from cogs.notion_cog.notion_api import NotionAPI
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+NOTION_TOKEN = os.getenv("NOTION_TOKEN")
+DATABASE_ID = "14aa21e2ec2280cc8766f22405b7a07e"
 
-intents = discord.Intents.default()
-intents.message_content = True
-
-class CustomClient(discord.Client):
+class StockBot(commands.Bot):
     def __init__(self):
-        super().__init__(intents=intents)
-        self.tree = app_commands.CommandTree(self)
-        self.alpha_api = AlphaAPI()
-        self.elon_monitor_channels = set()
+        intents = discord.Intents.default()
+        super().__init__(command_prefix="/", intents=intents)
+        self.notion_api = NotionAPI(NOTION_TOKEN, DATABASE_ID)
 
     async def setup_hook(self):
-        # Load cogs
-        await self.tree.add_cog(NotionCog(self))
-        await self.tree.add_cog(AlphaCog(self.alpha_api, self))
-        await self.tree.add_cog(ElonMonitorCog(self))
-        # Start background task
-        self.bg_task = self.loop.create_task(self.background_task())
+        # Add all cogs
+        await self.add_cog(AddStockCog(self))
+        await self.add_cog(AddEntryCog(self))
+        await self.add_cog(ListStockCog(self))
+        await self.add_cog(FibonacciCog(self))
+        
+        # Sync commands
+        await self.tree.sync()
 
-    async def background_task(self):
-        await self.wait_until_ready()
-        while not self.is_closed():
-            if self.elon_monitor_channels:
-                try:
-                    # Code for background task
-                    pass
-                except Exception as e:
-                    print(f"Error in background task: {e}")
-            await asyncio.sleep(5 * 60 * 60)  # 5 hours in seconds
+    async def on_ready(self):
+        print(f'Logged in as {self.user}')
 
-discord_client = CustomClient()
+def main():
+    bot = StockBot()
+    bot.run(DISCORD_TOKEN)
 
-# Load the Discord API key from .env file
-discord_token = os.getenv("DISCORD_TOKEN")
-
-discord_client.run(discord_token)
+if __name__ == "__main__":
+    main()
